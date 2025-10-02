@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MiEmpresa — Home</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">MiEmpresa</div>
+    <ul>
+      <li><a href="#nosotros">Nosotros</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+      <li><a href="inventory.html">Inventario</a></li>
+      <li><a id="logoutLink" href="#">Cerrar sesión</a></li>
+    </ul>
+  </header>
+
+  <!-- Carrusel -->
+  <section class="carousel" id="carousel">
+    <div class="slides">
+      <img src="assets/img/slide1.jpg" alt="Slide 1" />
+      <img src="assets/img/slide2.jpg" alt="Slide 2" />
+      <img src="assets/img/slide3.jpg" alt="Slide 3" />
+    </div>
+    <div class="carousel-controls">
+      <button id="prev">◀</button>
+      <button id="next">▶</button>
+    </div>
+  </section>
+
+  <!-- Contenido principal -->
+  <section class="products-section">
+    <div class="container">
+      <h2>Productos en oferta</h2>
+      <div id="offersGrid" class="products-grid"></div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div>
+      <strong>MiEmpresa Ltda.</strong><br />
+      Av. Principal 123, Santiago, Chile · +56 9 1234 5678<br />
+      contacto@miempresa.cl
+      <div class="socials" style="margin-top:8px;">
+        <a href="#" aria-label="facebook">FB</a>
+        <a href="#" aria-label="linkedin">LI</a>
+        <a href="#" aria-label="instagram">IG</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Chat widget -->
+  <button id="chatToggle" title="Abrir chat">💬</button>
+  <div id="chatWidget" class="hidden">
+    <div id="chatBox" class="chat-box hidden">
+      <div id="chatBody"><div class="bot-msg">Hola, ¿en qué podemos ayudarte?</div></div>
+      <div style="display:flex;padding:8px;border-top:1px solid #eee;">
+        <input id="chatInput" placeholder="Escribe tu mensaje..." />
+        <button id="sendChat">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
