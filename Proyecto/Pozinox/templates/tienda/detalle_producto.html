@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ producto.nombre }} - Pozinox{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-detail-container {
+        min-height: calc(100vh - 200px);
+        padding: 2rem 0;
+    }
+    
+    .breadcrumb {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .breadcrumb-item a {
+        color: #3b82f6;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .product-detail-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .product-image-section {
+        padding: 2rem;
+        background: #f9fafb;
+    }
+    
+    .product-main-image {
+        width: 100%;
+        max-width: 500px;
+        height: 400px;
+        object-fit: cover;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .product-image-placeholder {
+        width: 100%;
+        max-width: 500px;
+        height: 400px;
+        background: #e5e7eb;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 4rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .product-info-section {
+        padding: 2rem;
+    }
+    
+    .product-category {
+        color: #3b82f6;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .product-title {
+        color: #1e3a8a;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        font-size: 2rem;
+        line-height: 1.2;
+    }
+    
+    .product-code {
+        background: #f3f4f6;
+        color: #6b7280;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-block;
+        margin-bottom: 1.5rem;
+    }
+    
+    .product-description {
+        color: #374151;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .product-price {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .price-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    
+    .price-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .price-unit {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+    
+    .product-specs {
+        background: #f8fafc;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .specs-title {
+        color: #1e3a8a;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .specs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .spec-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .spec-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .spec-value {
+        color: #1e3a8a;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .product-actions {
+        background: #f9fafb;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .stock-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stock-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .stock-ok {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .stock-low {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .stock-empty {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .btn-add-cart {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+        color: white;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin-right: 1rem;
+    }
+    
+    .btn-add-cart:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(30, 58, 138, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-quote {
+        background: #059669;
+        border: none;
+        border-radius: 10px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+        color: white;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+    
+    .btn-quote:hover {
+        background: #047857;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .related-products {
+        margin-top: 3rem;
+    }
+    
+    .related-title {
+        color: #1e3a8a;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .related-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .related-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .related-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .related-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        background: #f3f4f6;
+    }
+    
+    .related-placeholder {
+        width: 100%;
+        height: 150px;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 2rem;
+    }
+    
+    .related-info {
+        padding: 1rem;
+    }
+    
+    .related-name {
+        color: #1e3a8a;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .related-price {
+        color: #059669;
+        font-weight: 600;
+    }
+    
+    .contact-info {
+        background: #f0f9ff;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        text-align: center;
+    }
+    
+    .contact-info h6 {
+        color: #1e3a8a;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .contact-info p {
+        color: #6b7280;
+        margin: 0.5rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="product-detail-container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'productos' %}">Productos</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ producto.nombre }}</li>
+        </ol>
+    </nav>
+    
+    <div class="product-detail-card">
+        <div class="row">
+            <!-- Imagen del producto -->
+            <div class="col-lg-6">
+                <div class="product-image-section">
+                    {% if producto.imagen %}
+                        <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="product-main-image">
+                    {% else %}
+                        <div class="product-image-placeholder">
+                            <i class="fas fa-image"></i>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Información del producto -->
+            <div class="col-lg-6">
+                <div class="product-info-section">
+                    <div class="product-category">{{ producto.categoria.nombre }}</div>
+                    <h1 class="product-title">{{ producto.nombre }}</h1>
+                    <div class="product-code">{{ producto.codigo_producto }}</div>
+                    
+                    <p class="product-description">{{ producto.descripcion }}</p>
+                    
+                    <div class="product-price">
+                        <div class="price-label">Precio por {{ producto.unidad_medida }}</div>
+                        <div class="price-value">${{ producto.precio_por_unidad|floatformat:0 }}</div>
+                        <div class="price-unit">CLP</div>
+                    </div>
+                    
+                    <!-- Especificaciones técnicas -->
+                    <div class="product-specs">
+                        <h3 class="specs-title">
+                            <i class="fas fa-cogs"></i>
+                            Especificaciones Técnicas
+                        </h3>
+                        
+                        <div class="specs-grid">
+                            <div class="spec-item">
+                                <div class="spec-label">Tipo de Acero</div>
+                                <div class="spec-value">{{ producto.get_tipo_acero_display }}</div>
+                            </div>
+                            
+                            {% if producto.grosor %}
+                                <div class="spec-item">
+                                    <div class="spec-label">Grosor</div>
+                                    <div class="spec-value">{{ producto.grosor }} mm</div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if producto.ancho %}
+                                <div class="spec-item">
+                                    <div class="spec-label">Ancho</div>
+                                    <div class="spec-value">{{ producto.ancho }} mm</div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if producto.largo %}
+                                <div class="spec-item">
+                                    <div class="spec-label">Largo</div>
+                                    <div class="spec-value">{{ producto.largo }} mm</div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if producto.peso_por_metro %}
+                                <div class="spec-item">
+                                    <div class="spec-label">Peso por Metro</div>
+                                    <div class="spec-value">{{ producto.peso_por_metro }} kg/m</div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if producto.precio_por_metro %}
+                                <div class="spec-item">
+                                    <div class="spec-label">Precio por Metro</div>
+                                    <div class="spec-value">${{ producto.precio_por_metro|floatformat:0 }}</div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if producto.precio_por_kg %}
+                                <div class="spec-item">
+                                    <div class="spec-label">Precio por Kilogramo</div>
+                                    <div class="spec-value">${{ producto.precio_por_kg|floatformat:0 }}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Acciones del producto -->
+                    <div class="product-actions">
+                        <div class="stock-status">
+                            <span>Stock: {{ producto.stock_actual }} {{ producto.unidad_medida }}</span>
+                            {% if producto.stock_bajo %}
+                                <span class="stock-badge stock-low">
+                                    <i class="fas fa-exclamation-triangle"></i> Stock Bajo
+                                </span>
+                            {% else %}
+                                <span class="stock-badge stock-ok">
+                                    <i class="fas fa-check"></i> Disponible
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if producto.stock_actual > 0 %}
+                            <a href="#" class="btn-add-cart">
+                                <i class="fas fa-shopping-cart me-2"></i>Agregar al Carrito
+                            </a>
+                        {% endif %}
+                        
+                        <a href="#" class="btn-quote">
+                            <i class="fas fa-envelope me-2"></i>Solicitar Cotización
+                        </a>
+                        
+                        <div class="contact-info">
+                            <h6><i class="fas fa-phone me-2"></i>¿Necesitas ayuda?</h6>
+                            <p><strong>Teléfono:</strong> +56 2 1234 5678</p>
+                            <p><strong>Email:</strong> ventas@pozinox.cl</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Productos relacionados -->
+    {% if productos_relacionados %}
+        <div class="related-products">
+            <h3 class="related-title">
+                <i class="fas fa-boxes me-2"></i>Productos Relacionados
+            </h3>
+            
+            <div class="related-grid">
+                {% for producto_rel in productos_relacionados %}
+                    <a href="{% url 'detalle_producto' producto_rel.id %}" class="related-card">
+                        {% if producto_rel.imagen %}
+                            <img src="{{ producto_rel.imagen.url }}" alt="{{ producto_rel.nombre }}" class="related-image">
+                        {% else %}
+                            <div class="related-placeholder">
+                                <i class="fas fa-image"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="related-info">
+                            <h6 class="related-name">{{ producto_rel.nombre }}</h6>
+                            <div class="related-price">${{ producto_rel.precio_por_unidad|floatformat:0 }}</div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
