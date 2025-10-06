@@ -7,7 +7,7 @@
 <style>
     .admin-container {
         min-height: calc(100vh - 200px);
-        padding: 2rem 0;
+        padding: 6rem 0 2rem 0;
     }
     
     .admin-header {
@@ -192,10 +192,10 @@
                 <p class="menu-description">Administrar categorías de productos</p>
             </a>
             
-            <a href="{% url 'panel_admin' %}" class="menu-item">
+            <a href="{% url 'lista_usuarios_admin' %}" class="menu-item">
                 <i class="fas fa-users menu-icon"></i>
-                <h4 class="menu-title">Clientes</h4>
-                <p class="menu-description">Gestionar clientes y pedidos (próximamente)</p>
+                <h4 class="menu-title">Usuarios</h4>
+                <p class="menu-description">Gestionar usuarios del sistema y sus permisos</p>
             </a>
             
             <a href="{% url 'panel_admin' %}" class="menu-item">
