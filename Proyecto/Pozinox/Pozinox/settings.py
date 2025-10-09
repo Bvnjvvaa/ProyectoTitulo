@@ -77,18 +77,11 @@ WSGI_APPLICATION = 'Pozinox.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Configuración MySQL para Pozinox
+# Configuración SQLite3 para Pozinox
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pozinox_db',
-        'USER': 'root',
-        'PASSWORD': 'losdeabajo1989$',  
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -136,6 +129,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'benj.veliz@duocuc.cl'
+EMAIL_HOST_PASSWORD = 'shilo151003'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'info@pozinox.cl'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
