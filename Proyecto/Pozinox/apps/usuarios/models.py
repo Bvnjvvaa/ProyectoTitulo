@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+import uuid
+from datetime import timedelta
 
 
 class PerfilUsuario(models.Model):
@@ -28,6 +31,10 @@ class PerfilUsuario(models.Model):
     # Configuraciones del usuario
     notificaciones_email = models.BooleanField(default=True)
     tema_oscuro = models.BooleanField(default=False)
+    
+    # Verificación de email
+    email_verificado = models.BooleanField(default=False)
+    fecha_verificacion_email = models.DateTimeField(null=True, blank=True)
     
     # Metadatos
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -162,3 +169,37 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     instance.perfil.save()
+
+
+class EmailVerificationToken(models.Model):
+    """Token para verificación de correo electrónico"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_tokens')
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Token de Verificación de Email'
+        verbose_name_plural = 'Tokens de Verificación de Email'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Token para {self.user.email} - {'Usado' if self.is_used else 'Activo'}"
+    
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            # Token válido por 24 horas
+            self.expires_at = timezone.now() + timedelta(hours=24)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        """Verificar si el token es válido"""
+        return not self.is_used and timezone.now() < self.expires_at
+    
+    def mark_as_used(self):
+        """Marcar token como usado"""
+        self.is_used = True
+        self.used_at = timezone.now()
+        self.save()

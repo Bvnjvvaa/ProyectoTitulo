@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Producto, CategoriaAcero, Cliente, Pedido, DetallePedido
+from .models import Producto, CategoriaAcero, Cliente, Pedido, DetallePedido, Cotizacion, DetalleCotizacion
 
 
 @admin.register(CategoriaAcero)
@@ -78,3 +78,47 @@ class DetallePedidoAdmin(admin.ModelAdmin):
     list_filter = ['pedido__estado']
     search_fields = ['pedido__numero_pedido', 'producto__nombre']
     ordering = ['-pedido__fecha_pedido']
+
+
+@admin.register(Cotizacion)
+class CotizacionAdmin(admin.ModelAdmin):
+    """Administración de cotizaciones"""
+    list_display = ['numero_cotizacion', 'usuario', 'estado', 'fecha_creacion', 'total', 'pago_completado']
+    list_filter = ['estado', 'pago_completado', 'metodo_pago', 'fecha_creacion']
+    search_fields = ['numero_cotizacion', 'usuario__username', 'usuario__email']
+    ordering = ['-fecha_creacion']
+    readonly_fields = ['numero_cotizacion', 'fecha_creacion', 'fecha_actualizacion']
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('usuario', 'numero_cotizacion', 'estado')
+        }),
+        ('Fechas', {
+            'fields': ('fecha_creacion', 'fecha_actualizacion', 'fecha_finalizacion')
+        }),
+        ('Totales', {
+            'fields': ('subtotal', 'iva', 'total')
+        }),
+        ('Pago', {
+            'fields': ('metodo_pago', 'pago_completado', 'mercadopago_preference_id', 'mercadopago_payment_id')
+        }),
+        ('Observaciones', {
+            'fields': ('observaciones',)
+        }),
+    )
+
+
+class DetalleCotizacionInline(admin.TabularInline):
+    """Inline para detalles de cotización"""
+    model = DetalleCotizacion
+    extra = 0
+    readonly_fields = ['subtotal']
+
+
+@admin.register(DetalleCotizacion)
+class DetalleCotizacionAdmin(admin.ModelAdmin):
+    """Administración de detalles de cotizaciones"""
+    list_display = ['cotizacion', 'producto', 'cantidad', 'precio_unitario', 'subtotal']
+    list_filter = ['cotizacion__estado']
+    search_fields = ['cotizacion__numero_cotizacion', 'producto__nombre']
+    ordering = ['-cotizacion__fecha_creacion']

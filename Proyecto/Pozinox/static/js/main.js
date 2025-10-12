@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initSmoothScrolling();
     initTooltips();
     initLazyLoading();
+    initNotifications();
     
     // Navbar scroll effect
     function initNavbar() {
@@ -79,6 +80,12 @@ document.addEventListener('DOMContentLoaded', function() {
         tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
+    }
+    
+    // Notificaciones ahora se manejan en base.html
+    function initNotifications() {
+        // Las notificaciones modales ahora se manejan directamente en el template base.html
+        // Esta función se mantiene para compatibilidad
     }
     
     // Lazy loading for images
@@ -163,24 +170,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Notification system
+    // Notification system con SweetAlert2
     function showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
+        let icon = type;
+        let title = 'Notificación';
         
-        document.body.appendChild(notification);
+        // Mapear tipos
+        if (type === 'success') {
+            title = '¡Éxito!';
+        } else if (type === 'error') {
+            title = 'Error';
+        } else if (type === 'warning') {
+            title = 'Advertencia';
+        } else if (type === 'info') {
+            title = 'Información';
+        }
         
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 5000);
+        Swal.fire({
+            icon: icon,
+            title: title,
+            text: message,
+            confirmButtonText: 'Aceptar',
+            timer: 4000,
+            timerProgressBar: true,
+            customClass: {
+                confirmButton: 'btn btn-primary px-4'
+            },
+            buttonsStyling: false
+        });
     }
     
     // Contact form handling
@@ -295,5 +312,56 @@ const Pozinox = {
                 setTimeout(() => inThrottle = false, limit);
             }
         };
+    },
+    
+    // Notification system - ahora disponible globalmente
+    notify: (message, type = 'info') => {
+        let icon = type;
+        let title = 'Notificación';
+        
+        // Mapear tipos
+        if (type === 'success') {
+            title = '¡Éxito!';
+        } else if (type === 'error') {
+            title = 'Error';
+        } else if (type === 'warning') {
+            title = 'Advertencia';
+        } else if (type === 'info') {
+            title = 'Información';
+        }
+        
+        Swal.fire({
+            icon: icon,
+            title: title,
+            text: message,
+            confirmButtonText: 'Aceptar',
+            timer: 4000,
+            timerProgressBar: true,
+            customClass: {
+                confirmButton: 'btn btn-primary px-4'
+            },
+            buttonsStyling: false
+        });
+    },
+    
+    // Confirmación con SweetAlert2
+    confirm: (title, message, callback) => {
+        Swal.fire({
+            title: title,
+            text: message,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, confirmar',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-primary px-4 me-2',
+                cancelButton: 'btn btn-secondary px-4'
+            },
+            buttonsStyling: false
+        }).then((result) => {
+            if (result.isConfirmed && callback) {
+                callback();
+            }
+        });
     }
 };

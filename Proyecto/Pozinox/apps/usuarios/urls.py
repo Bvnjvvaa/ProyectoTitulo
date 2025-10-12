@@ -8,6 +8,10 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('perfil/', views.perfil_view, name='perfil'),
     
+    # URLs de verificación de email
+    path('verificar-email/<uuid:token>/', views.verificar_email, name='verificar_email'),
+    path('reenviar-verificacion/', views.reenviar_email_verificacion, name='reenviar_verificacion'),
+    
     # URLs del Panel Admin (solo superusuarios)
     path('panel-admin/usuarios/', views.lista_usuarios_admin, name='lista_usuarios_admin'),
     path('panel-admin/usuarios/crear/', views.crear_usuario, name='crear_usuario'),
