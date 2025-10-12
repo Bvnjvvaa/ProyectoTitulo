@@ -11,6 +11,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+import dj_database_url
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +26,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-rj%70h$u-cq9_(j!!02=kieo*^d2e1@%yybjt!69qrvl1-a^+d'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-rj%70h$u-cq9_(j!!02=kieo*^d2e1@%yybjt!69qrvl1-a^+d')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -37,6 +43,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Storage S3 (Supabase)
+    'storages',
     
     # Aplicaciones del proyecto Pozinox
     'apps.tienda',
@@ -77,13 +86,27 @@ WSGI_APPLICATION = 'Pozinox.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Configuración SQLite3 para Pozinox
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Configuración de base de datos con Supabase PostgreSQL
+# Si existe DATABASE_URL (Supabase), úsala. Si no, usa SQLite como fallback
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    # Usar PostgreSQL de Supabase
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    # Fallback a SQLite para desarrollo local
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -127,18 +150,78 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Configuración de almacenamiento (Supabase Storage con S3)
+USE_S3_STORAGE = os.getenv('AWS_ACCESS_KEY_ID') is not None
+
+if USE_S3_STORAGE:
+    # Usar Supabase Storage (S3-compatible)
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    
+    # Credenciales S3
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'Productos')
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    
+    # Configuración de URLs
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')
+    
+    # Forzar que la URL incluya el bucket name
+    if AWS_S3_CUSTOM_DOMAIN:
+        AWS_S3_CUSTOM_DOMAIN = f"{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}"
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+    
+    # Configuración adicional
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = False
+    
+    # Configuración específica para django-storages
+    AWS_S3_VERIFY = False  # Desactivar verificación SSL si es necesario
+    AWS_S3_ADDRESSING_STYLE = 'path'  # Usar path-style para Supabase
+    
+    # Forzar uso de S3 en todos los FileField
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    
+    # URLs de media usando Supabase Storage
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_STORAGE_BUCKET_NAME}/"
+    print(f"🔗 MEDIA_URL configurada: {MEDIA_URL}")
+else:
+    # Usar almacenamiento local (fallback)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = 'benj.veliz@duocuc.cl'
-EMAIL_HOST_PASSWORD = 'shilo151003'
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = 'info@pozinox.cl'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'benj.veliz@duocuc.cl')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'shilo151003')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'info@pozinox.cl')
+
+# ==================================
+# CONFIGURACIÓN DE SUPABASE
+# ==================================
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+
+# Si se configuró Supabase, inicializar el cliente
+if SUPABASE_URL and SUPABASE_KEY:
+    from supabase import create_client, Client
+    SUPABASE_CLIENT: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ==================================
+# DEBUGGING STORAGE (temporal)
+# ==================================
+print("🔍 DEBUGGING STORAGE:")
+print("AWS_ACCESS_KEY_ID:", "✅ Configurado" if os.getenv('AWS_ACCESS_KEY_ID') else "❌ No configurado")
+print("USE_S3_STORAGE:", USE_S3_STORAGE)
+print("DEFAULT_FILE_STORAGE:", DEFAULT_FILE_STORAGE if USE_S3_STORAGE else "Local storage")

@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.conf import settings
+from storages.backends.s3boto3 import S3Boto3Storage
 
 
 class CategoriaAcero(models.Model):
@@ -49,7 +51,7 @@ class Producto(models.Model):
     unidad_medida = models.CharField(max_length=20, default='unidad')
     
     # Metadatos
-    imagen = models.ImageField(upload_to='productos/', null=True, blank=True)
+    imagen = models.ImageField(upload_to='productos/', null=True, blank=True, storage=S3Boto3Storage())
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
