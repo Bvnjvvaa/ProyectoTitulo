@@ -7,7 +7,8 @@
 <style>
     .register-container {
         min-height: calc(100vh - 200px);
-        padding: 2rem 0;
+        padding: 4rem 0 2rem 0;
+        margin-top: 2rem;
     }
     
     .register-card {
@@ -54,6 +55,12 @@
     .btn-register:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(30, 58, 138, 0.4);
+    }
+    
+    .btn-register:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
     }
     
     .register-footer {
@@ -106,6 +113,111 @@
         color: #6b7280;
         margin-top: 0.5rem;
     }
+    
+    /* Estilos para verificación de email */
+    .verificacion-section {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        border: 1px solid #e5e7eb;
+        display: none;
+    }
+    
+    .verificacion-section.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .codigo-input {
+        font-size: 1.5rem;
+        font-weight: bold;
+        letter-spacing: 6px;
+        text-align: center;
+        font-family: 'Courier New', monospace;
+        padding: 0.75rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        max-width: 200px;
+        margin: 0 auto;
+    }
+    
+    .codigo-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+    
+    .btn-verify {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-verify:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(5, 150, 105, 0.4);
+    }
+    
+    .btn-verify:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(5, 150, 105, 0.4);
+    }
+    
+    /* Estilos para email verificado */
+    .email-verificado {
+        background-color: #f0f9ff;
+        border-color: #10b981 !important;
+        position: relative;
+    }
+    
+    .email-verificado::after {
+        content: "✓";
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #10b981;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .email-verificado:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25) !important;
+    }
+    
 </style>
 {% endblock %}
 
@@ -127,7 +239,7 @@
             {% endfor %}
         {% endif %}
         
-        <form method="post">
+        <form method="post" id="registroForm">
             {% csrf_token %}
             
             <!-- Información Personal -->
@@ -175,6 +287,41 @@
                             {% endfor %}
                         </div>
                     {% endif %}
+                </div>
+                
+                <!-- Botón de verificar email al lado del campo email -->
+                <div class="d-grid">
+                    <button type="button" id="btnVerificarEmail" class="btn btn-verify mb-3" disabled>
+                        <i class="fas fa-envelope me-2"></i>
+                        <span id="btnText">Verificar Correo Electrónico</span>
+                        <span id="btnTimer" style="display: none;">
+                            Reenviar en <span id="countdown">30</span>s
+                        </span>
+                    </button>
+                </div>
+                
+                <!-- Sección de verificación (oculta inicialmente) -->
+                <div id="verificacionSection" class="verificacion-section">
+                    <div class="text-center">
+                        <h5 class="mb-3">Verificar Email</h5>
+                        <p class="text-muted mb-3">
+                            Código enviado a: <strong id="emailMostrar" class="text-primary"></strong>
+                        </p>
+                        
+                        <div class="mb-3">
+                            <input type="text" 
+                                   id="codigoVerificacion" 
+                                   class="form-control codigo-input" 
+                                   maxlength="6"
+                                   pattern="[0-9]{6}"
+                                   placeholder="000000"
+                                   autocomplete="off">
+                        </div>
+                        
+                        <button type="button" id="btnVerificarCodigo" class="btn btn-verify mb-2">
+                            <i class="fas fa-check me-2"></i>Verificar
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -230,17 +377,6 @@
                     <i class="fas fa-info-circle me-2"></i>Información Adicional
                 </h5>
                 
-                <div class="form-floating">
-                    {{ form.tipo_usuario }}
-                    <label for="{{ form.tipo_usuario.id_for_label }}">{{ form.tipo_usuario.label }}</label>
-                    {% if form.tipo_usuario.errors %}
-                        <div class="text-danger small mt-1">
-                            {% for error in form.tipo_usuario.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
                 
                 <div class="form-floating">
                     {{ form.telefono }}
@@ -296,9 +432,10 @@
                 </div>
             </div>
             
-            <button type="submit" class="btn btn-primary btn-register w-100 mb-3">
+            <!-- Botón para completar registro -->
+            <button type="submit" id="btnCrearCuenta" class="btn btn-register w-100 mb-3">
                 <i class="fas fa-user-plus me-2"></i>
-                Crear Cuenta
+                Completar Registro
             </button>
         </form>
         
@@ -312,6 +449,263 @@
 
 {% block extra_js %}
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const emailInput = document.getElementById('{{ form.email.id_for_label }}');
+    const btnVerificarEmail = document.getElementById('btnVerificarEmail');
+    const btnCrearCuenta = document.getElementById('btnCrearCuenta');
+    const btnVerificarCodigo = document.getElementById('btnVerificarCodigo');
+    const verificacionSection = document.getElementById('verificacionSection');
+    const codigoInput = document.getElementById('codigoVerificacion');
+    const emailMostrar = document.getElementById('emailMostrar');
+    const btnText = document.getElementById('btnText');
+    const btnTimer = document.getElementById('btnTimer');
+    const countdown = document.getElementById('countdown');
+    
+    let emailActual = '';
+    let cooldownTimer = null;
+    
+    // Habilitar botón de verificar cuando se ingresa email
+    emailInput.addEventListener('input', function() {
+        const email = this.value.trim();
+        if (email && isValidEmail(email) && !cooldownTimer) {
+            btnVerificarEmail.disabled = false;
+            emailActual = email;
+        } else if (cooldownTimer) {
+            // Si está en cooldown, mantener deshabilitado
+            btnVerificarEmail.disabled = true;
+        } else {
+            btnVerificarEmail.disabled = true;
+        }
+    });
+    
+    // Enviar código de verificación
+    btnVerificarEmail.addEventListener('click', function() {
+        if (!emailActual) return;
+        
+        // Guardar referencia al botón
+        const btn = this;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+        
+        fetch('{% url "enviar_codigo_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `email=${encodeURIComponent(emailActual)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                emailMostrar.textContent = emailActual;
+                verificacionSection.classList.add('show');
+                
+                // Iniciar cooldown de 30 segundos
+                startCooldown();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Código Enviado!',
+                    text: data.message,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            } else {
+                // Error - resetear botón
+                btnVerificarEmail.innerHTML = `
+                    <i class="fas fa-envelope me-2"></i>
+                    <span id="btnText">Verificar Correo Electrónico</span>
+                    <span id="btnTimer" style="display: none;">
+                        Reenviar en <span id="countdown">30</span>s
+                    </span>
+                `;
+                btnVerificarEmail.disabled = false;
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.message
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            
+            // Error de conexión - resetear botón
+            btnVerificarEmail.innerHTML = `
+                <i class="fas fa-envelope me-2"></i>
+                <span id="btnText">Verificar Correo Electrónico</span>
+                <span id="btnTimer" style="display: none;">
+                    Reenviar en <span id="countdown">30</span>s
+                </span>
+            `;
+            btnVerificarEmail.disabled = false;
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error de conexión. Intenta de nuevo.'
+            });
+        });
+    });
+    
+    // Auto-formatear código mientras se escribe
+    codigoInput.addEventListener('input', function() {
+        // Solo permitir números
+        this.value = this.value.replace(/[^0-9]/g, '');
+        
+        // Auto-submit cuando se completan 6 dígitos
+        if (this.value.length === 6) {
+            verificarCodigo();
+        }
+    });
+    
+    // Verificar código
+    btnVerificarCodigo.addEventListener('click', verificarCodigo);
+    
+    function verificarCodigo() {
+        const codigo = codigoInput.value.trim();
+        if (!codigo || codigo.length !== 6) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Código Incompleto',
+                text: 'Por favor ingresa los 6 dígitos del código.'
+            });
+            return;
+        }
+        
+        btnVerificarCodigo.disabled = true;
+        btnVerificarCodigo.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
+        
+        fetch('{% url "verificar_codigo_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `email=${encodeURIComponent(emailActual)}&codigo=${codigo}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Detener cooldown
+                stopCooldown();
+                
+                // Marcar email como verificado
+                emailInput.classList.add('email-verificado');
+                emailInput.disabled = true;
+                
+                // Cambiar botón de verificar a verificado
+                btnVerificarEmail.innerHTML = '<i class="fas fa-check-circle me-2"></i>Email Verificado';
+                btnVerificarEmail.classList.remove('btn-verify');
+                btnVerificarEmail.classList.add('btn-success');
+                btnVerificarEmail.disabled = true;
+                
+                // Ocultar sección de verificación
+                verificacionSection.style.display = 'none';
+                
+                // Cambiar el botón de "Completar Registro" a "Crear Cuenta"
+                btnCrearCuenta.innerHTML = '<i class="fas fa-check-circle me-2"></i>Crear Cuenta';
+                btnCrearCuenta.classList.remove('btn-register');
+                btnCrearCuenta.classList.add('btn-success');
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Verificado!',
+                    text: data.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Código Incorrecto',
+                    text: data.message
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error de conexión. Intenta de nuevo.'
+            });
+        })
+        .finally(() => {
+            btnVerificarCodigo.disabled = false;
+            btnVerificarCodigo.innerHTML = '<i class="fas fa-check-circle me-2"></i>Verificar Código';
+        });
+    }
+    
+    // Función para iniciar cooldown de 30 segundos
+    function startCooldown() {
+        // Restaurar HTML del botón
+        btnVerificarEmail.innerHTML = `
+            <i class="fas fa-envelope me-2"></i>
+            <span id="btnText">Verificar Correo Electrónico</span>
+            <span id="btnTimer" style="display: none;">
+                Reenviar en <span id="countdown">30</span>s
+            </span>
+        `;
+        
+        // Re-obtener referencias después de cambiar innerHTML
+        const btnText = document.getElementById('btnText');
+        const btnTimer = document.getElementById('btnTimer');
+        const countdown = document.getElementById('countdown');
+        
+        btnVerificarEmail.disabled = true;
+        btnText.style.display = 'none';
+        btnTimer.style.display = 'inline';
+        
+        let timeLeft = 30;
+        countdown.textContent = timeLeft;
+        
+        cooldownTimer = setInterval(() => {
+            timeLeft--;
+            countdown.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(cooldownTimer);
+                btnVerificarEmail.disabled = false;
+                btnText.style.display = 'inline';
+                btnTimer.style.display = 'none';
+                
+                // Cambiar texto del botón
+                btnText.textContent = 'Reenviar Código';
+            }
+        }, 1000);
+    }
+    
+    // Función para detener cooldown
+    function stopCooldown() {
+        if (cooldownTimer) {
+            clearInterval(cooldownTimer);
+            cooldownTimer = null;
+        }
+        
+        // Restaurar HTML del botón
+        btnVerificarEmail.innerHTML = `
+            <i class="fas fa-envelope me-2"></i>
+            <span id="btnText">Verificar Correo Electrónico</span>
+            <span id="btnTimer" style="display: none;">
+                Reenviar en <span id="countdown">30</span>s
+            </span>
+        `;
+        
+        btnVerificarEmail.disabled = false;
+    }
+    
+    // Validar email
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
     // Auto-dismiss alerts after 5 seconds
     setTimeout(function() {
         var alerts = document.querySelectorAll('.alert');
@@ -320,5 +714,6 @@
             bsAlert.close();
         });
     }, 5000);
+});
 </script>
 {% endblock %}

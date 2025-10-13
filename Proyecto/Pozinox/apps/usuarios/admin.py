@@ -4,18 +4,18 @@ from .models import PerfilUsuario, ConfiguracionSistema, LogActividad, Notificac
 
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
-    list_display = ['user', 'tipo_usuario', 'email_verificado', 'telefono', 'activo']
+    list_display = ['user', 'tipo_usuario', 'email_verificado', 'telefono', 'api_token', 'activo']
     list_filter = ['tipo_usuario', 'email_verificado', 'activo']
-    search_fields = ['user__username', 'user__email', 'telefono']
-    readonly_fields = ['fecha_creacion', 'fecha_actualizacion', 'fecha_verificacion_email']
+    search_fields = ['user__username', 'user__email', 'telefono', 'api_token']
+    readonly_fields = ['fecha_creacion', 'fecha_actualizacion', 'fecha_verificacion_email', 'token_created']
 
 
 @admin.register(EmailVerificationToken)
 class EmailVerificationTokenAdmin(admin.ModelAdmin):
-    list_display = ['user', 'token', 'created_at', 'expires_at', 'is_used']
+    list_display = ['email', 'codigo', 'created_at', 'expires_at', 'is_used', 'intentos']
     list_filter = ['is_used', 'created_at']
-    search_fields = ['user__username', 'user__email']
-    readonly_fields = ['token', 'created_at', 'used_at']
+    search_fields = ['email', 'codigo']
+    readonly_fields = ['codigo', 'created_at']
 
 
 @admin.register(ConfiguracionSistema)

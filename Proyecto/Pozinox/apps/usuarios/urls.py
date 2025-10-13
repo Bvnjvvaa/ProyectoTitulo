@@ -8,9 +8,15 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('perfil/', views.perfil_view, name='perfil'),
     
-    # URLs de verificación de email
-    path('verificar-email/<uuid:token>/', views.verificar_email, name='verificar_email'),
-    path('reenviar-verificacion/', views.reenviar_email_verificacion, name='reenviar_verificacion'),
+    
+    # URLs AJAX para verificación
+    path('ajax/enviar-codigo/', views.enviar_codigo_verificacion_ajax, name='enviar_codigo_ajax'),
+    path('ajax/verificar-codigo/', views.verificar_codigo_ajax, name='verificar_codigo_ajax'),
+    
+    # URLs API para chatbot
+    path('api/generate-token/', views.api_generate_token, name='api_generate_token'),
+    path('api/validate-token/', views.api_validate_token, name='api_validate_token'),
+    path('api/revoke-token/', views.api_revoke_token, name='api_revoke_token'),
     
     # URLs del Panel Admin (solo superusuarios)
     path('panel-admin/usuarios/', views.lista_usuarios_admin, name='lista_usuarios_admin'),

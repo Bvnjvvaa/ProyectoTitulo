@@ -7,7 +7,9 @@ from django.views.decorators.csrf import csrf_protect
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.utils import timezone
 from django.conf import settings
+from django.http import JsonResponse
 from .models import PerfilUsuario, EmailVerificationToken
 from .forms import LoginForm, RegistroForm, UsuarioForm
 
@@ -25,14 +27,6 @@ def login_view(request):
             
             user = authenticate(request, username=username, password=password)
             if user is not None:
-                # Verificar si el email está verificado (solo si está configurado)
-                if getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', False):
-                    if not user.perfil.email_verificado:
-                        messages.warning(request, 
-                            'Debes verificar tu correo electrónico antes de iniciar sesión. '
-                            'Revisa tu bandeja de entrada.')
-                        return redirect('login')
-                
                 login(request, user)
                 messages.success(request, f'¡Bienvenido, {user.first_name or user.username}!')
                 
@@ -48,39 +42,57 @@ def login_view(request):
 
 
 def registro_view(request):
-    """Vista para el registro de nuevos usuarios"""
+    """Vista para el registro en una sola página"""
     if request.user.is_authenticated:
         return redirect('home')
     
     if request.method == 'POST':
         form = RegistroForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            # Verificar que el email no esté registrado
+            email = form.cleaned_data['email']
+            if User.objects.filter(email=email).exists():
+                messages.error(request, 'Ya existe una cuenta con ese correo electrónico.')
+                return render(request, 'usuarios/registro.html', {'form': form})
             
-            # Crear perfil de usuario
+            # Verificar que el email esté verificado
+            if request.session.get('email_verificado') != email:
+                messages.error(request, 'Debes verificar tu correo electrónico antes de completar el registro.')
+                return render(request, 'usuarios/registro.html', {'form': form})
+            
+            # Crear usuario
+            user = User.objects.create_user(
+                username=form.cleaned_data['username'],
+                email=email,
+                password=form.cleaned_data['password1'],
+                first_name=form.cleaned_data.get('first_name', ''),
+                last_name=form.cleaned_data.get('last_name', ''),
+            )
+            
+            # Actualizar perfil
             perfil = user.perfil
-            perfil.tipo_usuario = form.cleaned_data['tipo_usuario']
-            perfil.telefono = form.cleaned_data['telefono']
-            perfil.direccion = form.cleaned_data['direccion']
-            perfil.comuna = form.cleaned_data['comuna']
-            perfil.ciudad = form.cleaned_data['ciudad']
+            perfil.tipo_usuario = 'cliente'  # Todos los usuarios son clientes
+            perfil.telefono = form.cleaned_data.get('telefono', '')
+            perfil.direccion = form.cleaned_data.get('direccion', '')
+            perfil.comuna = form.cleaned_data.get('comuna', '')
+            perfil.ciudad = form.cleaned_data.get('ciudad', '')
+            perfil.email_verificado = True  # Ya verificado
+            perfil.fecha_verificacion_email = timezone.now()
             perfil.save()
             
-            # Enviar email de verificación
-            if getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', False):
-                enviar_email_verificacion(user, request)
-                messages.success(request, 
-                    '¡Cuenta creada exitosamente! '
-                    'Te hemos enviado un correo para verificar tu email. '
-                    'Por favor revisa tu bandeja de entrada.')
-            else:
-                messages.success(request, '¡Cuenta creada exitosamente! Ya puedes iniciar sesión.')
+            # Limpiar sesión
+            if 'email_verificado' in request.session:
+                del request.session['email_verificado']
             
+            messages.success(request, 
+                '¡Cuenta creada exitosamente! Ya puedes iniciar sesión.')
             return redirect('login')
     else:
         form = RegistroForm()
     
     return render(request, 'usuarios/registro.html', {'form': form})
+
+
 
 
 def logout_view(request):
@@ -214,33 +226,36 @@ def eliminar_usuario(request, usuario_id):
 # SISTEMA DE VERIFICACIÓN DE EMAIL
 # ============================================
 
-def enviar_email_verificacion(user, request):
-    """Enviar email de verificación a un usuario"""
-    # Crear token de verificación
-    token = EmailVerificationToken.objects.create(user=user)
-    
-    # Construir URL de verificación
-    verification_url = request.build_absolute_uri(
-        f'/usuarios/verificar-email/{token.token}/'
-    )
-    
+def enviar_codigo_verificacion(email, codigo):
+    """Enviar código de 6 dígitos al email"""
     # Renderizar template HTML del email
-    html_message = render_to_string('usuarios/email_verificacion.html', {
-        'user': user,
-        'verification_url': verification_url,
-        'expires_hours': 24,
+    html_message = render_to_string('usuarios/email_codigo_verificacion.html', {
+        'email': email,
+        'codigo': codigo,
+        'expires_minutes': 10,
     })
     
     # Crear versión texto plano
-    plain_message = strip_tags(html_message)
+    plain_message = f"""
+Hola,
+
+Tu código de verificación para Pozinox es: {codigo}
+
+Este código es válido por 10 minutos.
+
+Si no solicitaste este código, puedes ignorar este mensaje.
+
+Saludos,
+Equipo Pozinox
+    """
     
     # Enviar email
     try:
         send_mail(
-            subject='Verifica tu correo electrónico - Pozinox',
+            subject='Tu código de verificación - Pozinox',
             message=plain_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
+            recipient_list=[email],
             html_message=html_message,
             fail_silently=False,
         )
@@ -250,65 +265,81 @@ def enviar_email_verificacion(user, request):
         return False
 
 
-def verificar_email(request, token):
-    """Vista para verificar el email del usuario"""
-    try:
-        email_token = EmailVerificationToken.objects.get(token=token)
-        
-        # Verificar si el token es válido
-        if not email_token.is_valid():
-            if email_token.is_used:
-                messages.info(request, 'Este link de verificación ya ha sido usado.')
-            else:
-                messages.error(request, 'Este link de verificación ha expirado. Solicita uno nuevo.')
-            return redirect('login')
-        
-        # Marcar email como verificado
-        user = email_token.user
-        perfil = user.perfil
-        perfil.email_verificado = True
-        from django.utils import timezone
-        perfil.fecha_verificacion_email = timezone.now()
-        perfil.save()
-        
-        # Marcar token como usado
-        email_token.mark_as_used()
-        
-        messages.success(request, 
-            '¡Email verificado exitosamente! Ahora puedes iniciar sesión.')
-        return redirect('login')
-        
-    except EmailVerificationToken.DoesNotExist:
-        messages.error(request, 'Link de verificación inválido.')
-        return redirect('login')
-
-
-def reenviar_email_verificacion(request):
-    """Reenviar email de verificación"""
-    if request.method == 'POST':
+def enviar_codigo_verificacion_ajax(request):
+    """Enviar código de verificación via AJAX"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         email = request.POST.get('email')
         
-        try:
-            user = User.objects.get(email=email)
-            
-            # Verificar si ya está verificado
-            if user.perfil.email_verificado:
-                messages.info(request, 'Este correo ya está verificado.')
-                return redirect('login')
-            
-            # Enviar nuevo email
-            if enviar_email_verificacion(user, request):
-                messages.success(request, 
-                    'Te hemos enviado un nuevo correo de verificación. '
-                    'Revisa tu bandeja de entrada.')
-            else:
-                messages.error(request, 
-                    'Hubo un error al enviar el correo. Intenta de nuevo más tarde.')
-            
-            return redirect('login')
-            
-        except User.DoesNotExist:
-            messages.error(request, 'No existe un usuario con ese correo.')
-            return redirect('reenviar_verificacion')
+        if not email:
+            return JsonResponse({'success': False, 'message': 'Email requerido'})
+        
+        # Verificar que el email no esté registrado
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'Ya existe una cuenta con ese correo electrónico.'})
+        
+        # Invalidar códigos anteriores
+        EmailVerificationToken.objects.filter(
+            email=email,
+            is_used=False
+        ).update(is_used=True)
+        
+        # Generar nuevo código
+        codigo_token = EmailVerificationToken.objects.create(email=email)
+        
+        # Enviar email
+        if enviar_codigo_verificacion(email, codigo_token.codigo):
+            return JsonResponse({
+                'success': True, 
+                'message': f'Código enviado a {email}',
+                'codigo': codigo_token.codigo  # Para testing, remover en producción
+            })
+        else:
+            return JsonResponse({'success': False, 'message': 'Error al enviar el código'})
     
-    return render(request, 'usuarios/reenviar_verificacion.html')
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+
+def verificar_codigo_ajax(request):
+    """Verificar código via AJAX"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        email = request.POST.get('email')
+        codigo = request.POST.get('codigo')
+        
+        if not email or not codigo:
+            return JsonResponse({'success': False, 'message': 'Email y código requeridos'})
+        
+        # Buscar el código más reciente para este email
+        try:
+            codigo_token = EmailVerificationToken.objects.filter(
+                email=email,
+                is_used=False
+            ).latest('created_at')
+            
+            # Verificar el código
+            if codigo_token.verificar_codigo(codigo):
+                # Código correcto - Marcar como verificado en sesión
+                request.session['email_verificado'] = email
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': '¡Email verificado exitosamente! Ahora puedes completar tu registro.',
+                })
+            else:
+                # Código incorrecto
+                if codigo_token.intentos >= 5:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': 'Máximo de intentos alcanzado. Solicita un nuevo código.'
+                    })
+                
+                return JsonResponse({
+                    'success': False, 
+                    'message': f'Código incorrecto. Te quedan {5 - codigo_token.intentos} intentos.'
+                })
+                
+        except EmailVerificationToken.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Código expirado o inválido'})
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+

@@ -36,6 +36,10 @@ class PerfilUsuario(models.Model):
     email_verificado = models.BooleanField(default=False)
     fecha_verificacion_email = models.DateTimeField(null=True, blank=True)
     
+    # Token API para chatbot
+    api_token = models.CharField(max_length=6, blank=True, null=True, unique=True, help_text="Token de 6 dígitos para chatbot")
+    token_created = models.DateTimeField(null=True, blank=True)
+    
     # Metadatos
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -47,6 +51,29 @@ class PerfilUsuario(models.Model):
     
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.get_tipo_usuario_display()})"
+    
+    def generate_api_token(self):
+        """Generar nuevo token de API (6 dígitos)"""
+        import random
+        from django.utils import timezone
+        
+        # Generar token de 6 dígitos
+        token = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        
+        # Asegurar que sea único
+        while PerfilUsuario.objects.filter(api_token=token).exists():
+            token = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        
+        self.api_token = token
+        self.token_created = timezone.now()
+        self.save()
+        return token
+    
+    def revoke_api_token(self):
+        """Revocar token de API"""
+        self.api_token = None
+        self.token_created = None
+        self.save()
 
 
 class ConfiguracionSistema(models.Model):
@@ -172,34 +199,48 @@ def save_user_profile(sender, instance, **kwargs):
 
 
 class EmailVerificationToken(models.Model):
-    """Token para verificación de correo electrónico"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_tokens')
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    """Código de verificación de correo electrónico"""
+    email = models.EmailField()  # Email temporal (antes de crear usuario)
+    codigo = models.CharField(max_length=6)  # Código de 6 dígitos
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
-    used_at = models.DateTimeField(null=True, blank=True)
+    intentos = models.PositiveIntegerField(default=0)  # Contador de intentos
     
     class Meta:
-        verbose_name = 'Token de Verificación de Email'
-        verbose_name_plural = 'Tokens de Verificación de Email'
+        verbose_name = 'Código de Verificación de Email'
+        verbose_name_plural = 'Códigos de Verificación de Email'
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"Token para {self.user.email} - {'Usado' if self.is_used else 'Activo'}"
+        return f"Código para {self.email} - {'Usado' if self.is_used else 'Activo'}"
     
     def save(self, *args, **kwargs):
         if not self.expires_at:
-            # Token válido por 24 horas
-            self.expires_at = timezone.now() + timedelta(hours=24)
+            # Código válido por 10 minutos
+            self.expires_at = timezone.now() + timedelta(minutes=10)
+        if not self.codigo:
+            # Generar código de 6 dígitos
+            import random
+            self.codigo = ''.join([str(random.randint(0, 9)) for _ in range(6)])
         super().save(*args, **kwargs)
     
     def is_valid(self):
-        """Verificar si el token es válido"""
-        return not self.is_used and timezone.now() < self.expires_at
+        """Verificar si el código es válido"""
+        return not self.is_used and timezone.now() < self.expires_at and self.intentos < 5
     
-    def mark_as_used(self):
-        """Marcar token como usado"""
-        self.is_used = True
-        self.used_at = timezone.now()
+    def verificar_codigo(self, codigo_ingresado):
+        """Verificar si el código ingresado es correcto"""
+        self.intentos += 1
         self.save()
+        
+        if not self.is_valid():
+            return False
+        
+        if self.codigo == codigo_ingresado:
+            self.is_used = True
+            self.save()
+            return True
+        
+        return False
+    

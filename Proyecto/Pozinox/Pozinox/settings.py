@@ -203,7 +203,7 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'pozinox.empresa@gmail.com'
 
 # Configuración de verificación de email
-EMAIL_VERIFICATION_REQUIRED = True  # Requerir verificación de email para login
+EMAIL_VERIFICATION_REQUIRED = False  # NO requerir verificación para login
 
 # ==================================
 # CONFIGURACIÓN DE SUPABASE

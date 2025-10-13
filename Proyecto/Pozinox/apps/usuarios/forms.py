@@ -59,14 +59,6 @@ class RegistroForm(UserCreationForm):
     )
     
     # Campos del perfil
-    tipo_usuario = forms.ChoiceField(
-        choices=PerfilUsuario.TIPO_USUARIO,
-        initial='cliente',
-        widget=forms.Select(attrs={
-            'class': 'form-select'
-        }),
-        label='Tipo de Usuario'
-    )
     telefono = forms.CharField(
         max_length=20,
         required=False,
