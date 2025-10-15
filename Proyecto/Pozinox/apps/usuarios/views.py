@@ -343,3 +343,96 @@ def verificar_codigo_ajax(request):
     return JsonResponse({'success': False, 'message': 'Método no permitido'})
 
 
+# ============================================
+# API PARA CHATBOT - TOKENS
+# ============================================
+
+@login_required
+def api_generate_token(request):
+    """Generar token de API para chatbot"""
+    if request.method == 'POST':
+        try:
+            perfil = request.user.perfil
+            token = perfil.generate_api_token()
+            
+            return JsonResponse({
+                'success': True,
+                'token': token,
+                'message': 'Token generado exitosamente'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al generar token: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+
+def api_validate_token(request):
+    """Validar token de API para chatbot"""
+    if request.method == 'POST':
+        token = request.POST.get('token')
+        
+        if not token:
+            return JsonResponse({
+                'success': False,
+                'message': 'Token requerido'
+            })
+        
+        try:
+            perfil = PerfilUsuario.objects.get(api_token=token)
+            
+            # Verificar que el token no esté expirado (válido por 30 días)
+            from datetime import timedelta
+            if perfil.token_created and perfil.token_created + timedelta(days=30) > timezone.now():
+                return JsonResponse({
+                    'success': True,
+                    'valid': True,
+                    'user_id': perfil.user.id,
+                    'username': perfil.user.username,
+                    'tipo_usuario': perfil.tipo_usuario,
+                    'message': 'Token válido'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'valid': False,
+                    'message': 'Token expirado'
+                })
+        except PerfilUsuario.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'valid': False,
+                'message': 'Token inválido'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al validar token: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+
+@login_required
+def api_revoke_token(request):
+    """Revocar token de API"""
+    if request.method == 'POST':
+        try:
+            perfil = request.user.perfil
+            perfil.revoke_api_token()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Token revocado exitosamente'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al revocar token: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+
