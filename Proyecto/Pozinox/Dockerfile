@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código de la aplicación
 COPY . /app/
 
+# Copiar configuración de Nginx
+COPY nginx.conf /etc/nginx/nginx.conf
+
 # Crear directorio para archivos estáticos
 RUN mkdir -p /app/staticfiles
 
