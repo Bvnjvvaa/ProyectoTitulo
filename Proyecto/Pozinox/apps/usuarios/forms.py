@@ -211,13 +211,6 @@ class UsuarioForm(forms.ModelForm):
         }),
         label='Ciudad'
     )
-    activo = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input'
-        }),
-        label='Usuario Activo'
-    )
 
     class Meta:
         model = User
@@ -279,7 +272,6 @@ class UsuarioForm(forms.ModelForm):
                 self.fields['direccion'].initial = perfil.direccion
                 self.fields['comuna'].initial = perfil.comuna
                 self.fields['ciudad'].initial = perfil.ciudad
-                self.fields['activo'].initial = perfil.activo
             except PerfilUsuario.DoesNotExist:
                 pass
 
@@ -341,7 +333,6 @@ class UsuarioForm(forms.ModelForm):
             perfil.direccion = self.cleaned_data['direccion']
             perfil.comuna = self.cleaned_data['comuna']
             perfil.ciudad = self.cleaned_data['ciudad']
-            perfil.activo = self.cleaned_data['activo']
             perfil.save()
         
         return user

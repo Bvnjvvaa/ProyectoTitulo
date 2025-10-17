@@ -53,12 +53,12 @@ def registro_view(request):
             email = form.cleaned_data['email']
             if User.objects.filter(email=email).exists():
                 messages.error(request, 'Ya existe una cuenta con ese correo electrónico.')
-                return render(request, 'usuarios/registro.html', {'form': form})
+                return render(request, 'usuarios/registro.html', {'form': form, 'email_verificado': request.session.get('email_verificado')})
             
             # Verificar que el email esté verificado
             if request.session.get('email_verificado') != email:
                 messages.error(request, 'Debes verificar tu correo electrónico antes de completar el registro.')
-                return render(request, 'usuarios/registro.html', {'form': form})
+                return render(request, 'usuarios/registro.html', {'form': form, 'email_verificado': request.session.get('email_verificado')})
             
             # Crear usuario
             user = User.objects.create_user(
@@ -87,7 +87,12 @@ def registro_view(request):
             messages.success(request, 
                 '¡Cuenta creada exitosamente! Ya puedes iniciar sesión.')
             return redirect('login')
+        # Si el formulario no es válido, mantener el estado de verificación
+        return render(request, 'usuarios/registro.html', {'form': form, 'email_verificado': request.session.get('email_verificado')})
     else:
+        # Limpiar verificación si se accede por GET (recarga de página)
+        if 'email_verificado' in request.session:
+            del request.session['email_verificado']
         form = RegistroForm()
     
     return render(request, 'usuarios/registro.html', {'form': form})
@@ -168,9 +173,17 @@ def crear_usuario(request):
     if request.method == 'POST':
         form = UsuarioForm(request.POST)
         if form.is_valid():
-            usuario = form.save()
-            messages.success(request, f'Usuario "{usuario.username}" creado exitosamente.')
-            return redirect('lista_usuarios_admin')
+            try:
+                usuario = form.save()
+                messages.success(request, f'Usuario "{usuario.username}" creado exitosamente.')
+                return redirect('lista_usuarios_admin')
+            except Exception as e:
+                messages.error(request, f'Error al crear usuario: {str(e)}')
+        else:
+            # Debug: mostrar errores del formulario
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = UsuarioForm()
     

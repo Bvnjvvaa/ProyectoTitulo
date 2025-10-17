@@ -175,9 +175,32 @@
     }
     
     .btn-verify:disabled {
-        opacity: 0.6;
+        opacity: 0.7;
         cursor: not-allowed;
         transform: none;
+        transition: all 0.3s ease;
+    }
+    
+    /* Animación para el cooldown */
+    .btn-verify.cooldown {
+        background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    /* Estilo para botón de reenvío */
+    .btn-verify.reenviar {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    }
+    
+    .btn-verify.reenviar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
     }
     
     .btn-success {
@@ -216,6 +239,84 @@
     .email-verificado:focus {
         border-color: #10b981 !important;
         box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25) !important;
+    }
+    
+    /* Estilo para campo readonly (email verificado) */
+    .email-verificado[readonly] {
+        background-color: #f8f9fa !important;
+        cursor: not-allowed;
+        opacity: 0.8;
+    }
+    
+    /* Estilos para el toast personalizado */
+    .swal-toast-popup {
+        border-radius: 12px !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid #e5e7eb !important;
+        max-width: 400px !important;
+        min-width: 350px !important;
+        z-index: 9999 !important;
+    }
+    
+    /* Contenedor del toast para posicionamiento */
+    .swal2-container.swal2-top-end {
+        padding-top: 80px !important;
+        padding-right: 20px !important;
+    }
+    
+    /* Eliminar backdrop del toast */
+    .swal2-backdrop {
+        display: none !important;
+    }
+    
+    
+    .swal-toast-title {
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        color: #059669 !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .swal-toast-content {
+        font-size: 0.95rem !important;
+        color: #374151 !important;
+        line-height: 1.4 !important;
+    }
+    
+    .swal2-popup.swal2-toast {
+        flex-direction: row !important;
+        align-items: center !important;
+        padding: 1rem 1.5rem !important;
+    }
+    
+    .swal2-popup.swal2-toast .swal2-title {
+        margin: 0 0 0 0.5rem !important;
+        flex-grow: 1 !important;
+    }
+    
+    .swal2-popup.swal2-toast .swal2-content {
+        margin: 0.5rem 0 0 0.5rem !important;
+        flex-grow: 1 !important;
+    }
+    
+    .swal2-popup.swal2-toast .swal2-icon {
+        margin: 0 !important;
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        font-size: 1.2rem !important;
+    }
+    
+    .swal2-popup.swal2-toast .swal2-icon.swal2-success {
+        border-color: #10b981 !important;
+        color: #10b981 !important;
+    }
+    
+    .swal2-popup.swal2-toast .swal2-icon.swal2-success [class^=swal2-success-line] {
+        background-color: #10b981 !important;
+    }
+    
+    .swal2-popup.swal2-toast .swal2-icon.swal2-success .swal2-success-ring {
+        border-color: rgba(16, 185, 129, 0.3) !important;
     }
     
 </style>
@@ -452,39 +553,26 @@
 document.addEventListener('DOMContentLoaded', function() {
     const emailInput = document.getElementById('{{ form.email.id_for_label }}');
     const btnVerificarEmail = document.getElementById('btnVerificarEmail');
-    const btnCrearCuenta = document.getElementById('btnCrearCuenta');
-    const btnVerificarCodigo = document.getElementById('btnVerificarCodigo');
     const verificacionSection = document.getElementById('verificacionSection');
     const codigoInput = document.getElementById('codigoVerificacion');
-    const emailMostrar = document.getElementById('emailMostrar');
-    const btnText = document.getElementById('btnText');
-    const btnTimer = document.getElementById('btnTimer');
-    const countdown = document.getElementById('countdown');
+    const btnVerificarCodigo = document.getElementById('btnVerificarCodigo');
     
     let emailActual = '';
-    let cooldownTimer = null;
     
-    // Habilitar botón de verificar cuando se ingresa email
+    // Habilitar botón cuando se ingresa email válido
     emailInput.addEventListener('input', function() {
         const email = this.value.trim();
-        if (email && isValidEmail(email) && !cooldownTimer) {
+        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             btnVerificarEmail.disabled = false;
             emailActual = email;
-        } else if (cooldownTimer) {
-            // Si está en cooldown, mantener deshabilitado
-            btnVerificarEmail.disabled = true;
         } else {
             btnVerificarEmail.disabled = true;
         }
     });
     
-    // Enviar código de verificación
+    // Enviar código
     btnVerificarEmail.addEventListener('click', function() {
-        if (!emailActual) return;
-        
-        // Guardar referencia al botón
         const btn = this;
-        
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
         
@@ -500,85 +588,101 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                emailMostrar.textContent = emailActual;
+                document.getElementById('emailMostrar').textContent = emailActual;
                 verificacionSection.classList.add('show');
                 
-                // Iniciar cooldown de 30 segundos
-                startCooldown();
+                // Mostrar botón como enviado exitosamente
+                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>¡Enviado!';
+                btn.classList.remove('btn-verify');
+                btn.classList.add('btn-success');
                 
                 Swal.fire({
                     icon: 'success',
                     title: '¡Código Enviado!',
                     text: data.message,
-                    timer: 3000,
-                    showConfirmButton: false
+                    timer: 4000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end',
+                    width: '400px',
+                    padding: '1.5rem',
+                    background: '#f8fafc',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    customClass: {
+                        popup: 'swal-toast-popup',
+                        title: 'swal-toast-title',
+                        content: 'swal-toast-content'
+                    }
                 });
-            } else {
-                // Error - resetear botón
-                btnVerificarEmail.innerHTML = `
-                    <i class="fas fa-envelope me-2"></i>
-                    <span id="btnText">Verificar Correo Electrónico</span>
-                    <span id="btnTimer" style="display: none;">
-                        Reenviar en <span id="countdown">30</span>s
-                    </span>
-                `;
-                btnVerificarEmail.disabled = false;
                 
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.message
-                });
+                // Iniciar cooldown de 30 segundos
+                iniciarCooldown(btn);
+            } else {
+                Swal.fire('Error', data.message, 'error');
+                resetearBoton(btn);
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            
-            // Error de conexión - resetear botón
-            btnVerificarEmail.innerHTML = `
-                <i class="fas fa-envelope me-2"></i>
-                <span id="btnText">Verificar Correo Electrónico</span>
-                <span id="btnTimer" style="display: none;">
-                    Reenviar en <span id="countdown">30</span>s
-                </span>
-            `;
-            btnVerificarEmail.disabled = false;
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error de conexión. Intenta de nuevo.'
-            });
+        .catch(() => {
+            Swal.fire('Error', 'Error de conexión', 'error');
+            resetearBoton(btn);
         });
     });
     
-    // Auto-formatear código mientras se escribe
-    codigoInput.addEventListener('input', function() {
-        // Solo permitir números
-        this.value = this.value.replace(/[^0-9]/g, '');
+    function resetearBoton(btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-envelope me-2"></i>Verificar Correo Electrónico';
+        btn.classList.remove('btn-success', 'cooldown', 'reenviar');
+        btn.classList.add('btn-verify');
+        btn.style.animation = '';
+    }
+    
+    function iniciarCooldown(btn) {
+        let tiempoRestante = 30;
         
-        // Auto-submit cuando se completan 6 dígitos
-        if (this.value.length === 6) {
-            verificarCodigo();
+        // Limpiar cualquier cooldown previo
+        if (window.cooldownTimer) {
+            clearInterval(window.cooldownTimer);
         }
-    });
+        
+        // Agregar clase de cooldown
+        btn.classList.add('cooldown');
+        
+        const actualizarBoton = () => {
+            if (tiempoRestante > 0) {
+                btn.innerHTML = `<i class="fas fa-clock me-2"></i>Reenviar en ${tiempoRestante}s`;
+                btn.disabled = true;
+                tiempoRestante--;
+                window.cooldownTimer = setTimeout(actualizarBoton, 1000);
+            } else {
+                // Finalizar cooldown
+                btn.innerHTML = '<i class="fas fa-redo me-2"></i>Reenviar Código';
+                btn.disabled = false;
+                btn.classList.remove('btn-success', 'cooldown');
+                btn.classList.add('btn-verify', 'reenviar');
+                
+                // Agregar efecto de "listo para reenviar"
+                btn.style.animation = 'none';
+                btn.offsetHeight; // Trigger reflow
+                btn.style.animation = 'pulse 1s ease-in-out';
+                
+                window.cooldownTimer = null;
+            }
+        };
+        
+        actualizarBoton();
+    }
     
     // Verificar código
-    btnVerificarCodigo.addEventListener('click', verificarCodigo);
-    
-    function verificarCodigo() {
+    btnVerificarCodigo.addEventListener('click', function() {
         const codigo = codigoInput.value.trim();
         if (!codigo || codigo.length !== 6) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Código Incompleto',
-                text: 'Por favor ingresa los 6 dígitos del código.'
-            });
+            Swal.fire('Código Incompleto', 'Ingresa los 6 dígitos', 'warning');
             return;
         }
         
-        btnVerificarCodigo.disabled = true;
-        btnVerificarCodigo.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
         
         fetch('{% url "verificar_codigo_ajax" %}', {
             method: 'POST',
@@ -592,128 +696,54 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Detener cooldown
-                stopCooldown();
+                // Detener cualquier cooldown activo
+                if (window.cooldownTimer) {
+                    clearInterval(window.cooldownTimer);
+                    window.cooldownTimer = null;
+                }
                 
-                // Marcar email como verificado
                 emailInput.classList.add('email-verificado');
-                emailInput.disabled = true;
-                
-                // Cambiar botón de verificar a verificado
+                emailInput.readOnly = true;
                 btnVerificarEmail.innerHTML = '<i class="fas fa-check-circle me-2"></i>Email Verificado';
-                btnVerificarEmail.classList.remove('btn-verify');
+                btnVerificarEmail.classList.remove('btn-verify', 'cooldown', 'reenviar');
                 btnVerificarEmail.classList.add('btn-success');
-                btnVerificarEmail.disabled = true;
-                
-                // Ocultar sección de verificación
                 verificacionSection.style.display = 'none';
-                
-                // Cambiar el botón de "Completar Registro" a "Crear Cuenta"
-                btnCrearCuenta.innerHTML = '<i class="fas fa-check-circle me-2"></i>Crear Cuenta';
-                btnCrearCuenta.classList.remove('btn-register');
-                btnCrearCuenta.classList.add('btn-success');
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Verificado!',
-                    text: data.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                Swal.fire('¡Verificado!', data.message, 'success');
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Código Incorrecto',
-                    text: data.message
-                });
+                Swal.fire('Código Incorrecto', data.message, 'error');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error de conexión. Intenta de nuevo.'
-            });
+        .catch(() => {
+            Swal.fire('Error', 'Error de conexión', 'error');
         })
         .finally(() => {
-            btnVerificarCodigo.disabled = false;
-            btnVerificarCodigo.innerHTML = '<i class="fas fa-check-circle me-2"></i>Verificar Código';
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-check me-2"></i>Verificar';
         });
-    }
+    });
     
-    // Función para iniciar cooldown de 30 segundos
-    function startCooldown() {
-        // Restaurar HTML del botón
-        btnVerificarEmail.innerHTML = `
-            <i class="fas fa-envelope me-2"></i>
-            <span id="btnText">Verificar Correo Electrónico</span>
-            <span id="btnTimer" style="display: none;">
-                Reenviar en <span id="countdown">30</span>s
-            </span>
-        `;
-        
-        // Re-obtener referencias después de cambiar innerHTML
-        const btnText = document.getElementById('btnText');
-        const btnTimer = document.getElementById('btnTimer');
-        const countdown = document.getElementById('countdown');
-        
-        btnVerificarEmail.disabled = true;
-        btnText.style.display = 'none';
-        btnTimer.style.display = 'inline';
-        
-        let timeLeft = 30;
-        countdown.textContent = timeLeft;
-        
-        cooldownTimer = setInterval(() => {
-            timeLeft--;
-            countdown.textContent = timeLeft;
-            
-            if (timeLeft <= 0) {
-                clearInterval(cooldownTimer);
-                btnVerificarEmail.disabled = false;
-                btnText.style.display = 'inline';
-                btnTimer.style.display = 'none';
-                
-                // Cambiar texto del botón
-                btnText.textContent = 'Reenviar Código';
-            }
-        }, 1000);
-    }
-    
-    // Función para detener cooldown
-    function stopCooldown() {
-        if (cooldownTimer) {
-            clearInterval(cooldownTimer);
-            cooldownTimer = null;
+    // Auto-submit al completar 6 dígitos
+    codigoInput.addEventListener('input', function() {
+        this.value = this.value.replace(/[^0-9]/g, '');
+        if (this.value.length === 6) {
+            btnVerificarCodigo.click();
         }
-        
-        // Restaurar HTML del botón
-        btnVerificarEmail.innerHTML = `
-            <i class="fas fa-envelope me-2"></i>
-            <span id="btnText">Verificar Correo Electrónico</span>
-            <span id="btnTimer" style="display: none;">
-                Reenviar en <span id="countdown">30</span>s
-            </span>
-        `;
-        
-        btnVerificarEmail.disabled = false;
-    }
+    });
     
-    // Validar email
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-    
-    // Auto-dismiss alerts after 5 seconds
-    setTimeout(function() {
-        var alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
-            var bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        });
-    }, 5000);
+    // Verificar si el email ya está verificado desde el servidor
+    {% if email_verificado %}
+        const emailVerificado = '{{ email_verificado }}';
+        if (emailVerificado) {
+            emailInput.value = emailVerificado;
+            emailInput.classList.add('email-verificado');
+            emailInput.readOnly = true;
+            btnVerificarEmail.innerHTML = '<i class="fas fa-check-circle me-2"></i>Email Verificado';
+            btnVerificarEmail.classList.remove('btn-verify');
+            btnVerificarEmail.classList.add('btn-success');
+            btnVerificarEmail.disabled = true;
+            emailActual = emailVerificado;
+        }
+    {% endif %}
 });
 </script>
 {% endblock %}
