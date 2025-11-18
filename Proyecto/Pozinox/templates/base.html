@@ -226,14 +226,7 @@
     {% if messages %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const messages = [
-                {% for message in messages %}
-                {
-                    type: '{{ message.tags }}',
-                    text: '{{ message|escapejs }}'
-                }{% if not forloop.last %},{% endif %}
-                {% endfor %}
-            ];
+
             
             // Mostrar notificaciones secuencialmente
             let currentIndex = 0;

@@ -17,20 +17,102 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from io import BytesIO
+import random
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 def home(request):
-    """Vista principal de la página de inicio"""
-    # Obtener productos destacados
+    """Vista principal de la página de inicio.
+
+    Además maneja el formulario de contacto (GET para mostrar suma captcha, POST para validar
+    y enviar el correo al administrador).
+    """
+    # Obtener productos destacados y categorías
     productos_destacados = Producto.objects.filter(activo=True)[:6]
-    
-    # Obtener categorías principales
     categorias = CategoriaAcero.objects.filter(activa=True)[:4]
-    
+
+    error_suma = None
+    success = None
+
+    if request.method == 'POST':
+        # Recuperar suma desde sesión
+        suma_a = request.session.get('suma_a', 0)
+        suma_b = request.session.get('suma_b', 0)
+
+        try:
+            suma_usuario = int(request.POST.get('suma', 0))
+        except (ValueError, TypeError):
+            suma_usuario = None
+
+        if suma_usuario is None or suma_usuario != (suma_a + suma_b):
+            error_suma = 'La suma es incorrecta. Intenta nuevamente.'
+        else:
+            # Campos del formulario
+            nombre = request.POST.get('nombre', '').strip()
+            rut = request.POST.get('rut', '').strip()
+            direccion = request.POST.get('direccion', '').strip()
+            comuna = request.POST.get('comuna', '').strip()
+            ciudad = request.POST.get('ciudad', '').strip()
+            giro = request.POST.get('giro', '').strip()
+            email = request.POST.get('email', '').strip()
+            telefono = request.POST.get('telefono', '').strip()
+            mensaje = request.POST.get('mensaje', '').strip()
+
+            # Construir cuerpo del correo con formato ordenado y énfasis en el mensaje
+            cuerpo = []
+            cuerpo.append('Nuevo mensaje de contacto desde el sitio Pozinox')
+            cuerpo.append('----------------------------------------------------')
+            cuerpo.append(f'Nombre: {nombre}')
+            cuerpo.append(f'RUT: {rut}')
+            cuerpo.append(f'Dirección: {direccion}')
+            cuerpo.append(f'Comuna: {comuna}')
+            cuerpo.append(f'Ciudad: {ciudad}')
+            cuerpo.append(f'Giro: {giro}')
+            cuerpo.append(f'Email remitente: {email}')
+            cuerpo.append(f'Teléfono: {telefono}')
+            cuerpo.append('')
+            cuerpo.append('--- MENSAJE ADJUNTO (comienzo) ---')
+            cuerpo.append(mensaje)
+            cuerpo.append('--- MENSAJE ADJUNTO (fin) ---')
+            cuerpo.append('')
+            cuerpo.append('Por favor, responder al email del remitente si procede.')
+
+            cuerpo_texto = '\n'.join(cuerpo)
+
+            try:
+                send_mail(
+                    subject='[Contacto] Nuevo mensaje desde Pozinox',
+                    message=cuerpo_texto,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=['benj.veliz@duocuc.cl'],
+                    fail_silently=False,
+                )
+                success = '¡Mensaje enviado correctamente! Nos contactaremos pronto.'
+            except Exception:
+                error_suma = 'Ocurrió un error al enviar el mensaje. Intenta más tarde.'
+
+        # Generar nueva suma para el siguiente intento (GET de vuelta al template)
+        suma_a = random.randint(1, 9)
+        suma_b = random.randint(1, 9)
+        request.session['suma_a'] = suma_a
+        request.session['suma_b'] = suma_b
+
+    else:
+        # GET: generar suma captcha
+        suma_a = random.randint(1, 9)
+        suma_b = random.randint(1, 9)
+        request.session['suma_a'] = suma_a
+        request.session['suma_b'] = suma_b
+
     context = {
         'productos_destacados': productos_destacados,
         'categorias': categorias,
         'titulo': 'Pozinox - Tienda de Aceros',
+        'suma_a': request.session.get('suma_a', 0),
+        'suma_b': request.session.get('suma_b', 0),
+        'error_suma': error_suma,
+        'success': success,
     }
     return render(request, 'tienda/home.html', context)
 
